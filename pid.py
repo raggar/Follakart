@@ -19,7 +19,7 @@ class PID:
         self.kd = kderivative
         self.integral = 0
         self.max_integral = maximum_integral
-        self.min_out = 0
+        self.min_out = -100
         self.max_out = maximum_output
         self.past_positions = [0, 0] # Stores past positions of the object for derivative calculations
         self.measurement_time = [time.time(), 0]
@@ -46,12 +46,7 @@ class PID:
 
         # print(str(self.measurement_time[1]))
 
-        derivative = (self.past_positions[0] - self.past_positions[1])/(self.measurement_time[0] - self.measurement_time[1])
-
-        """
-            If the integral becomes too large in either direction, it may cause the car to overshoot its target. 
-            Thus, to prevent this, we ensure the integral attains a maximum magnitude. 
-        """
+        derivative = current - self.past_positions[1]
 
         # Determines integral value
         self.integral = self.integral + error
@@ -61,8 +56,16 @@ class PID:
         elif self.integral < self.max_integral * -1:
             self.integral = self.max_integral * -1
 
+        # If error is less than a specified amount, then integral value is dropped to reduce speed
+        if abs(error) < 10 and error != 0:
+            self.integral = round(self.integral/4)
+        # If error is zero, output is set to zero
+        elif error == 0:
+            self.integral = 0
+            derivative = 0
+
         # Calculates required motor output and ensures it stays within min and max values
-        motor_output = error * self.kp + self.integral * self.ki + derivative * self.kd
+        motor_output = round(error * self.kp + self.integral * self.ki + derivative * self.kd)
 
         if motor_output < self.min_out:
             motor_output = self.min_out
@@ -71,6 +74,7 @@ class PID:
 
         # print("Values: ", str(error), "; ", str(self.integral), "; ", str(derivative))
         # print("Output: ", str(motor_output))
+        # print()
 
         return motor_output # Returns the required PWM value
 
