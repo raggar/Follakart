@@ -13,7 +13,7 @@ desired_distance = 0; # DECIDE THIS
     Since we are using PWM for the motors, we need to use GPIO 12 or 13
 """
 
-""" Everything below this line will be in the infinite while loop!!! """
+""" START OF INFINITE WHILE LOOP """
 
 # Take image and process it
 
@@ -49,7 +49,7 @@ elif motor_pwm < 0:
 
 # Delay for 10-100 ms
 
-""" END OF LOOP """
+""" END OF INFINITE WHILE LOOP """
 
 
 
