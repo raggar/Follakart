@@ -1,11 +1,10 @@
-import pid  # Imports PID Class
+import pd  # Imports PID Class
 import RPi.GPIO as GPIO
 import time
 
 # We will need to test values to find the optimum ones
-angle_pid = pid.PID(0.7, 0.2, 0.3, 200, 60, 80)  # Constructs PID class for when the robot needs to rotate
-forward_pid = pid.PID(0.4, 0.07, 0.1, 200, 40,
-                      65)  # Constructs PID class for when the robot needs to move forwards and backwards
+angle_pid = pd.PD(5, 2, 60, 80)  # Constructs PID class for when the robot needs to rotate
+forward_pid = pd.PD(0.4, 0.1, 40, 65)  # Constructs PID class for when the robot needs to move forwards and backwards
 
 desired_angle = 0  # We want the ball to be at 0 degrees relative to the centre
 desired_distance = 10;  # DECIDE THIS
@@ -16,7 +15,6 @@ motor_1_backward = 23
 motor_1_en = 25
 
 # Define ports for motor 2 (Right)
-
 motor_2_forward = 27
 motor_2_backward = 22
 motor_2_en = 17
@@ -45,7 +43,7 @@ pwm_motor_2.start(70)
 
 # Tara and Amanda's functions apply in next two lines
 left_or_right = 1  # 0 for Left, 1 for Right, 2 for centre
-current_angle = 40  # This value will be given by Amanda and Tara's function
+current_angle = 26  # This value will be given by Amanda and Tara's function
 current_distance = 1  # This value will be given by Amanda and Tara's function
 
 print("Starting")
@@ -103,6 +101,7 @@ while not (done):
 GPIO.cleanup()
 print("GPIO Clean up")
 """ END OF INFINITE WHILE LOOP """
+
 
 
 
