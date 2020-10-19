@@ -3,8 +3,8 @@ import RPi.GPIO as GPIO
 import time
 
 # We will need to test values to find the optimum ones
-angle_pid = pd.PD(5, 2, 65, 90)  # Constructs PD class for when the robot needs to rotate
-forward_pid = pd.PD(12, 5, 65, 90)  # Constructs PD class for when the robot needs to move forwards and backwards
+angle_pid = pd.PD(5, 2, 65, 80)  # Constructs PD class for when the robot needs to rotate
+forward_pid = pd.PD(12, 5, 65, 80)  # Constructs PD class for when the robot needs to move forwards and backwards
 
 desired_angle = 0  # We want the ball to be at 0 degrees relative to the centre
 desired_distance = 10;  # DECIDE THIS
