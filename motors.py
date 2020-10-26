@@ -42,6 +42,17 @@ pwm_motor_1.start(75)
 pwm_motor_2.start(70)
 
 # Tara and Amanda's functions apply in next two lines
+def calcDistance():
+    obj = detect_object()
+    precievedWidth = obj[3]
+    focalLen = 612.8
+    return (6 * focalLen) / percievedWidth
+
+def calcAngle(obj, distance):
+    pixelDistanceFromCenter = abs(320 - obj[2][0])
+    angle = math.degrees(math.atan((pixelDistanceFromCenter * 0.015)/distance))
+    return angle
+
 left_or_right = 1  # 0 for Left, 1 for Right, 2 for centre, -1 for not found
 current_angle = 10  # This value will be given by Amanda and Tara's function
 current_distance = 20  # This value will be given by Amanda and Tara's function
