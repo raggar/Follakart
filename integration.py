@@ -8,12 +8,6 @@ import RPi.GPIO as GPIO
 import math
 import pd
 
-### GLOBAL VARIABLE DEFINITION BEGINS ###
-
-### GLOBAL VARIABLE DEFINITION ENDS ###
-
-
-
 ### METHOD BLOCK BEGINS ###
 
 def detect_object(image):
@@ -61,9 +55,8 @@ def detect_object(image):
     return -1, [-1, -1], [-1, -1] # If object not found
 
 def calcDistance(object_dimensions):
-    percievedWidth = object_dimensions[0]
     focalLen = 612.8
-    return (6 * focalLen) / percievedWidth
+    return (6 * focalLen) / object_dimensions[0]
 
 def calcAngle(obj_coordinates, distance):
     pixelDistanceFromCenter = abs(320 - obj_coordinates[0])
@@ -102,7 +95,7 @@ forward_pd = pd.PD(12, 5, 65, 90)  # Constructs PD class for when the robot need
 
 # Desired position for the ball with respect to the car
 desired_angle = 0
-desired_distance = 10;
+desired_distance = 30
 
 # Define ports for motor 1 (Left)
 motor_1_forward = 24
