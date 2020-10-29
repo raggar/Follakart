@@ -39,3 +39,12 @@ A requirements.txt file acts as a package.json file and basically lists each dep
 `pip install -r requirements.txt`
 
 Make sure that when you install new project packages that they are added to the requirements.txt file (should be kept at the root directory). Use `pip freeze` to view a list of packages.
+
+### References
+- Computer Vision:
+- Object Position Calculations:
+- Motors and GPIO:
+    - [https://howchoo.com/g/mjg5ytzmnjh/controlling-dc-motors-using-your-raspberry-pi](https://howchoo.com/g/mjg5ytzmnjh/controlling-dc-motors-using-your-raspberry-pi)
+        - This link was used to learn how to initialize and set the RPi GPIO pins using the RPi.GPIO Library. 
+    - [https://www.mbtechworks.com/projects/raspberry-pi-pwm.html](https://www.mbtechworks.com/projects/raspberry-pi-pwm.html)
+        - This link was used to learn how to integrate Pulse Width Modulation (PWM) using the RPi.GPIO Library. 

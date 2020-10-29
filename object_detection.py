@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-# Video frame dimensions (480p) (funnily enough, these are also the center coordinates of the frame...)
+# Video frame dimensions (480p)
 video_frame_width = 640
 video_frame_height = 480
 video_brightness_adjustment = 7
