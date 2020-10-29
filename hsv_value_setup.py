@@ -75,6 +75,7 @@ while True:
     # Display images
     titles = ["Image", "Mask", "Result"]
     images = [image, mask, result]
+    # cv2.imshow("result", result)
 
     for i in range(len(images)):
         converted_image = cv2.cvtColor(images[i], cv2.COLOR_BGR2RGB)
