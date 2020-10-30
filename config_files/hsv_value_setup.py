@@ -1,6 +1,6 @@
 """
 Tested Values: 
-- Hue_min: 008
+- Hue_min: 007
 - Hue_max: 179
 - Sat_min: 000
 - Sat_max: 255
@@ -13,8 +13,6 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 # takes in current position of trackbar (called everytime trackbar value changes)
-
-
 def placeholder_method(current_position):
     print(current_position)
     pass
