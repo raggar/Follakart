@@ -97,7 +97,7 @@ current_distance = 0
 raw_capture = PiRGBArray(camera, size=(640, 480)) # Generates a 3D RGB array and stores it in rawCapture
 time.sleep(0.1) # Wait a certain number of seconds to allow the camera time to warmup
 
-angle_pd = pd.PD(5, 2, 65, 90)  # Constructs PD class for when the robot needs to rotate
+angle_pd = pd.PD(7, 2, 65, 90)  # Constructs PD class for when the robot needs to rotate
 forward_pd = pd.PD(12, 5, 65, 90)  # Constructs PD class for when the robot needs to move forwards and backwards
 
 # Desired position for the ball with respect to the car
@@ -140,6 +140,8 @@ object_contour_area = 0  # Gives indication of how close the object is to the ca
 object_coordinates_in_frame = [0, 0]  # Coordinates of object in the frame
 object_rectangle_width_height = [0, 0]  # Width and height of bounding rectangle
 
+undetected_counter = 0
+
 for frame in camera.capture_continuous(raw_capture, format="bgr", use_video_port=True): # Capture frames continuously from the camera
 
     image = frame.array # Grab the raw NumPy array representing the image
@@ -162,7 +164,7 @@ for frame in camera.capture_continuous(raw_capture, format="bgr", use_video_port
         elif object_position_relative == 2 or object_position_relative == -1:
             motor_pwm = forward_pd.get_output(current_distance, desired_distance)
 
-        print(current_distance, " ", current_angle, " ", motor_pwm, " ", object_position_relative, " ", object_center_coordinates, " ", object_rectangle_width_height)  # Debugging
+        # print(current_distance, " ", current_angle, " ", motor_pwm, " ", object_position_relative, " ", object_center_coordinates, " ", object_rectangle_width_height)  # Debugging
 
         # Powers motors
         if object_position_relative == 0:  # Left
@@ -182,7 +184,7 @@ for frame in camera.capture_continuous(raw_capture, format="bgr", use_video_port
             GPIO.output(motor_2_backward, GPIO.LOW)
             time.sleep(0.15)
         elif object_position_relative == 2:  # Centre
-            if current_distance > desired_distance:  # If car is farther than desired target
+            if current_distance > desired_distance:  # If car is farther than desired targeta
                 pwm_motor_1.ChangeDutyCycle(motor_pwm)
                 pwm_motor_2.ChangeDutyCycle(motor_pwm)
                 time.sleep(0.05)
@@ -201,14 +203,16 @@ for frame in camera.capture_continuous(raw_capture, format="bgr", use_video_port
             time.sleep(0.2)
 
     else:  # Object not found
-        a = 0
-    #     pwm_motor_2.ChangeDutyCycle(80)
-    #     time.sleep(0.05)
-    #     GPIO.output(motor_1_forward, GPIO.LOW)
-    #     GPIO.output(motor_1_backward, GPIO.LOW)
-    #     GPIO.output(motor_2_forward, GPIO.HIGH)
-    #     GPIO.output(motor_2_backward, GPIO.LOW)
-    #     time.sleep(0.4)
+        undetected_counter = undetected_counter + 1
+        if undetected_counter == 5:
+            undetected_counter = 0
+            pwm_motor_2.ChangeDutyCycle(80)
+            time.sleep(0.05)
+            GPIO.output(motor_1_forward, GPIO.LOW)
+            GPIO.output(motor_1_backward, GPIO.LOW)
+            GPIO.output(motor_2_forward, GPIO.HIGH)
+            GPIO.output(motor_2_backward, GPIO.LOW)
+            time.sleep(0.4)
 
 
     GPIO.output(motor_1_forward, GPIO.LOW)
