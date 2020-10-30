@@ -97,12 +97,12 @@ current_distance = 0
 raw_capture = PiRGBArray(camera, size=(640, 480)) # Generates a 3D RGB array and stores it in rawCapture
 time.sleep(0.1) # Wait a certain number of seconds to allow the camera time to warmup
 
-angle_pd = pd.PD(7, 2, 65, 90)  # Constructs PD class for when the robot needs to rotate
+angle_pd = pd.PD(5.5, 2, 75, 90)  # Constructs PD class for when the robot needs to rotate
 forward_pd = pd.PD(12, 5, 65, 90)  # Constructs PD class for when the robot needs to move forwards and backwards
 
 # Desired position for the ball with respect to the car
 desired_angle = 0
-desired_distance = 30
+desired_distance = 35
 
 # Define ports for motor 1 (Left)
 motor_1_forward = 24
@@ -140,7 +140,7 @@ object_contour_area = 0  # Gives indication of how close the object is to the ca
 object_coordinates_in_frame = [0, 0]  # Coordinates of object in the frame
 object_rectangle_width_height = [0, 0]  # Width and height of bounding rectangle
 
-undetected_counter = 0
+undetected_counter = 0 # Counts number of times car did not detect ball in a row
 
 for frame in camera.capture_continuous(raw_capture, format="bgr", use_video_port=True): # Capture frames continuously from the camera
 
@@ -154,6 +154,8 @@ for frame in camera.capture_continuous(raw_capture, format="bgr", use_video_port
     raw_capture.truncate(0) # Clear the stream in preparation for the next frame
 
     if object_contour_area != -1: # If object is found
+        undetected_counter = 0
+
         # Calculates distances
         current_distance = calcDistance(object_rectangle_width_height)
         current_angle = calcAngle(object_coordinates_in_frame, current_distance)
