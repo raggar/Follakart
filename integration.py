@@ -47,12 +47,19 @@ def detect_object(image):
                 object_center_coordinates = [x + width/2, y - height/2]
                 object_rectangle_width_height = [width, height]
 
+                if object_center_coordinates[0] < (video_frame_width/2-30):  # Left
+                    object_position_relative = 0
+                elif object_center_coordinates[0] > (video_frame_width/2+30):  # Right
+                    object_position_relative = 1
+                else:
+                    object_position_relative = 2
+
                 cv2.rectangle(image, (x, y), (x + width, y + height), (0, 255, 0), 3)  # Draws rectangle on image
 
                 # Exits for loop (and function) after the ball is found to reduce execution time
-                return shape_area, object_center_coordinates, object_rectangle_width_height
+                return object_position_relative, shape_area, object_center_coordinates, object_rectangle_width_height
 
-    return -1, [-1, -1], [-1, -1] # If object not found
+    return -1, -1, [-1, -1], [-1, -1] # If object not found
 
 def calcDistance(object_dimensions):
     focalLen = 612.8
@@ -137,7 +144,7 @@ for frame in camera.capture_continuous(raw_capture, format="bgr", use_video_port
 
     image = frame.array # Grab the raw NumPy array representing the image
 
-    object_contour_area, object_center_coordinates, object_rectangle_width_height = detect_object(image)  # Calls method to process image and identify object
+    object_position_relative, object_contour_area, object_center_coordinates, object_rectangle_width_height = detect_object(image)  # Calls method to process image and identify object
 
     cv2.imshow("Webcam_Input", image)
     cv2.waitKey(50)
@@ -183,14 +190,14 @@ for frame in camera.capture_continuous(raw_capture, format="bgr", use_video_port
                 GPIO.output(motor_1_backward, GPIO.LOW)
                 GPIO.output(motor_2_forward, GPIO.HIGH)
                 GPIO.output(motor_2_backward, GPIO.LOW)
-        #     elif current_distance < desired_distance:  # If car is closer than desired target
-        #         pwm_motor_1.ChangeDutyCycle(motor_pwm)
-        #         pwm_motor_2.ChangeDutyCycle(motor_pwm)
-        #         time.sleep(0.05)
-        #         GPIO.output(motor_1_forward, GPIO.LOW)
-        #         GPIO.output(motor_1_backward, GPIO.HIGH)
-        #         GPIO.output(motor_2_forward, GPIO.LOW)
-        #         GPIO.output(motor_2_backward, GPIO.HIGH)
+            elif current_distance < desired_distance:  # If car is closer than desired target
+                pwm_motor_1.ChangeDutyCycle(motor_pwm)
+                pwm_motor_2.ChangeDutyCycle(motor_pwm)
+                time.sleep(0.05)
+                GPIO.output(motor_1_forward, GPIO.LOW)
+                GPIO.output(motor_1_backward, GPIO.HIGH)
+                GPIO.output(motor_2_forward, GPIO.LOW)
+                GPIO.output(motor_2_backward, GPIO.HIGH)
             time.sleep(0.2)
 
     else:  # Object not found
@@ -204,18 +211,18 @@ for frame in camera.capture_continuous(raw_capture, format="bgr", use_video_port
     #     time.sleep(0.4)
 
 
-    # GPIO.output(motor_1_forward, GPIO.LOW)
-    # GPIO.output(motor_1_backward, GPIO.LOW)
-    # GPIO.output(motor_2_forward, GPIO.LOW)
-    # GPIO.output(motor_2_backward, GPIO.LOW)
+    GPIO.output(motor_1_forward, GPIO.LOW)
+    GPIO.output(motor_1_backward, GPIO.LOW)
+    GPIO.output(motor_2_forward, GPIO.LOW)
+    GPIO.output(motor_2_backward, GPIO.LOW)
 
     time.sleep(0.05)
 
 print("Done")
 
-# pwm_motor_1.stop()
-# pwm_motor_2.stop()
-# GPIO.cleanup()
+pwm_motor_1.stop()
+pwm_motor_2.stop()
+GPIO.cleanup()
 
 ### MAIN BLOCK ENDS ###
 
