@@ -31,7 +31,7 @@ class PD:
 
     def get_output(self, current, desired):
         # print("Getting output") # Debugging purposes
-        print("Input vlaues: ", str(current), " ", str(desired))
+        # print("Input vlaues: ", str(current), " ", str(desired))
 
         error = abs(desired - current)
 
@@ -48,16 +48,16 @@ class PD:
 
         # Calculates required motor output and ensures it stays within min and max values
         motor_output = round(error * self.kp +  derivative * self.kd)
-        print("Raw value: ", str(motor_output))
+        # print("Raw value: ", str(motor_output))
 
         if motor_output < self.min_out:
             motor_output = self.min_out
         elif motor_output > self.max_out:
             motor_output = self.max_out
 
-        print("Values: ", str(error), "; ",  str(derivative))
-        print("Output: ", str(motor_output))
-        print()
+        # print("Values: ", str(error), "; ",  str(derivative))
+        # print("Output: ", str(motor_output))
+        # print()
 
         return motor_output  # Returns the required PWM value
 
