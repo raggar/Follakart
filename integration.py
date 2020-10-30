@@ -103,29 +103,29 @@ motor_1_backward = 23
 motor_1_en = 25
 
 # Define ports for motor 2 (Right)
-motor_2_forward = 27
-motor_2_backward = 22
+motor_2_forward = 22
+motor_2_backward = 27
 motor_2_en = 17
 
 # Initialize GPIO
-# GPIO.setwarnings(False)
-# GPIO.setmode(GPIO.BCM)
-# GPIO.setup(motor_1_forward, GPIO.OUT)
-# GPIO.setup(motor_1_backward, GPIO.OUT)
-# GPIO.setup(motor_1_en, GPIO.OUT)
-# GPIO.output(motor_1_forward, GPIO.LOW)
-# GPIO.output(motor_1_backward, GPIO.LOW)
-# GPIO.setup(motor_2_forward, GPIO.OUT)
-# GPIO.setup(motor_2_backward, GPIO.OUT)
-# GPIO.setup(motor_2_en, GPIO.OUT)
-# GPIO.output(motor_2_forward, GPIO.LOW)
-# GPIO.output(motor_2_backward, GPIO.LOW)
-# pwm_motor_1 = GPIO.PWM(motor_1_en, 1000)
-# pwm_motor_2 = GPIO.PWM(motor_2_en, 1000)
+GPIO.setwarnings(False)
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(motor_1_forward, GPIO.OUT)
+GPIO.setup(motor_1_backward, GPIO.OUT)
+GPIO.setup(motor_1_en, GPIO.OUT)
+GPIO.output(motor_1_forward, GPIO.LOW)
+GPIO.output(motor_1_backward, GPIO.LOW)
+GPIO.setup(motor_2_forward, GPIO.OUT)
+GPIO.setup(motor_2_backward, GPIO.OUT)
+GPIO.setup(motor_2_en, GPIO.OUT)
+GPIO.output(motor_2_forward, GPIO.LOW)
+GPIO.output(motor_2_backward, GPIO.LOW)
+pwm_motor_1 = GPIO.PWM(motor_1_en, 1000)
+pwm_motor_2 = GPIO.PWM(motor_2_en, 1000)
 
 # Starts PWMs
-# pwm_motor_1.start(75)
-# pwm_motor_2.start(70)
+pwm_motor_1.start(75)
+pwm_motor_2.start(70)
 
 # Information about Object
 object_position_relative = 0  # 0 means left of center, 1 means right, 2 means center, -1 means not found
@@ -158,31 +158,31 @@ for frame in camera.capture_continuous(raw_capture, format="bgr", use_video_port
         print(current_distance, " ", current_angle, " ", motor_pwm, " ", object_position_relative, " ", object_center_coordinates, " ", object_rectangle_width_height)  # Debugging
 
         # Powers motors
-        # if object_position_relative == 0:  # Left
-        #     pwm_motor_2.ChangeDutyCycle(motor_pwm)
-        #     time.sleep(0.05)
-        #     GPIO.output(motor_1_forward, GPIO.LOW)
-        #     GPIO.output(motor_1_backward, GPIO.LOW)
-        #     GPIO.output(motor_2_forward, GPIO.HIGH)
-        #     GPIO.output(motor_2_backward, GPIO.LOW)
-        #     time.sleep(0.15)
-        # elif object_position_relative == 1:  # Right
-        #     pwm_motor_1.ChangeDutyCycle(motor_pwm)
-        #     time.sleep(0.05)
-        #     GPIO.output(motor_1_forward, GPIO.HIGH)
-        #     GPIO.output(motor_1_backward, GPIO.LOW)
-        #     GPIO.output(motor_2_forward, GPIO.LOW)
-        #     GPIO.output(motor_2_backward, GPIO.LOW)
-        #     time.sleep(0.15)
-        # elif object_position_relative == 2:  # Centre
-        #     if current_distance > desired_distance:  # If car is farther than desired target
-        #         pwm_motor_1.ChangeDutyCycle(motor_pwm)
-        #         pwm_motor_2.ChangeDutyCycle(motor_pwm)
-        #         time.sleep(0.05)
-        #         GPIO.output(motor_1_forward, GPIO.HIGH)
-        #         GPIO.output(motor_1_backward, GPIO.LOW)
-        #         GPIO.output(motor_2_forward, GPIO.HIGH)
-        #         GPIO.output(motor_2_backward, GPIO.LOW)
+        if object_position_relative == 0:  # Left
+            pwm_motor_2.ChangeDutyCycle(motor_pwm)
+            time.sleep(0.05)
+            GPIO.output(motor_1_forward, GPIO.LOW)
+            GPIO.output(motor_1_backward, GPIO.LOW)
+            GPIO.output(motor_2_forward, GPIO.HIGH)
+            GPIO.output(motor_2_backward, GPIO.LOW)
+            time.sleep(0.15)
+        elif object_position_relative == 1:  # Right
+            pwm_motor_1.ChangeDutyCycle(motor_pwm)
+            time.sleep(0.05)
+            GPIO.output(motor_1_forward, GPIO.HIGH)
+            GPIO.output(motor_1_backward, GPIO.LOW)
+            GPIO.output(motor_2_forward, GPIO.LOW)
+            GPIO.output(motor_2_backward, GPIO.LOW)
+            time.sleep(0.15)
+        elif object_position_relative == 2:  # Centre
+            if current_distance > desired_distance:  # If car is farther than desired target
+                pwm_motor_1.ChangeDutyCycle(motor_pwm)
+                pwm_motor_2.ChangeDutyCycle(motor_pwm)
+                time.sleep(0.05)
+                GPIO.output(motor_1_forward, GPIO.HIGH)
+                GPIO.output(motor_1_backward, GPIO.LOW)
+                GPIO.output(motor_2_forward, GPIO.HIGH)
+                GPIO.output(motor_2_backward, GPIO.LOW)
         #     elif current_distance < desired_distance:  # If car is closer than desired target
         #         pwm_motor_1.ChangeDutyCycle(motor_pwm)
         #         pwm_motor_2.ChangeDutyCycle(motor_pwm)
@@ -191,7 +191,7 @@ for frame in camera.capture_continuous(raw_capture, format="bgr", use_video_port
         #         GPIO.output(motor_1_backward, GPIO.HIGH)
         #         GPIO.output(motor_2_forward, GPIO.LOW)
         #         GPIO.output(motor_2_backward, GPIO.HIGH)
-        #     time.sleep(0.2)
+            time.sleep(0.2)
 
     else:  # Object not found
         a = 0
