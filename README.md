@@ -45,7 +45,7 @@ Make sure that when you install new project packages that they are added to the 
     -  [https://www.youtube.com/watch?v=N81PCpADwKQ&t=2017s](https://www.youtube.com/watch?v=N81PCpADwKQ&t=2017s7)
         - This video was used to learn how to install opencv, detect HSV values and draw contours
     - [https://docs.opencv.org/master/](https://docs.opencv.org/master/)
-    -   - Used OpenCV documentation to learn the fundamentals of computer visions 
+    -   - Used OpenCV documentation to learn the fundamentals of computer vision 
 - Object Position Calculations:
     -  [https://gist.github.com/bbartling/a9a64d8dd176c89575b89bab2ed23ae7](https://gist.github.com/bbartling/a9a64d8dd176c89575b89bab2ed23ae7)
         - This code was used to learn methods of calculating the distance between a camera and an object
