@@ -43,6 +43,12 @@ Make sure that when you install new project packages that they are added to the 
 ### References
 - Computer Vision:
 - Object Position Calculations:
+    -  [https://gist.github.com/bbartling/a9a64d8dd176c89575b89bab2ed23ae7](https://gist.github.com/bbartling/a9a64d8dd176c89575b89bab2ed23ae7)
+        - This code was used to learn methods of calculating the distance between a camera and an object
+    - [https://www.pyimagesearch.com/2015/01/19/find-distance-camera-objectmarker-using-python-opencv/](https://www.pyimagesearch.com/2015/01/19/find-distance-camera-objectmarker-using-python-opencv/)
+        - This website was used to examine a method of calcultaing the distance between a camera and an object
+    - [https://stackoverflow.com/questions/17499409/opencv-calculate-angle-between-camera-and-pixel/17505081](https://stackoverflow.com/questions/17499409/opencv-calculate-angle-between-camera-and-pixel/17505081)
+        - This website was used to find issues people had while calculating the angle and ensure we did not run into the same problems
 - Motors and GPIO:
     - [https://howchoo.com/g/mjg5ytzmnjh/controlling-dc-motors-using-your-raspberry-pi](https://howchoo.com/g/mjg5ytzmnjh/controlling-dc-motors-using-your-raspberry-pi)
         - This link was used to learn how to initialize and set the RPi GPIO pins using the RPi.GPIO Library. 
