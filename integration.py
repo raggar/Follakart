@@ -70,7 +70,7 @@ def calc_angle(obj_coordinates, distance):
     angle = math.degrees(math.atan((pixelDistanceFromCenter * 0.015) / distance))
     return angle
 
-def intelligent_search(position_relative, coordinates, distance, angle):
+def intelligent_search(position_relative, coordinates, distance, times):
     turn_direction = 0 # 1 for right, 0 for left
     motor_power = 0 # Desired motor power
 
@@ -94,12 +94,22 @@ def intelligent_search(position_relative, coordinates, distance, angle):
             turn_direction = 0
 
     # Uses the past measurements of the object to determine appropriate motor power
-    # Minimum value will be 75, and maximum will be 100
-
+    # Minimum value will be 80, and maximum will be 100
     # Methodology
     # We can estimate the speed with which the object moved by looking at its cahange in x coordinates.
-    # We can use distance and angle to adjust this estimation for a more accurate result
+    # We can use distance to adjust this estimation to get the desired motor output
+    estimated_speed = (coordinates[0][0] - coordinates[1][0])/(times[0] - times[1])
+    scale_factor = 5/distance
 
+    motor_power = estimated_speed * scale_factor
+
+    print(estimated_speed, " ", motor_power, " ", turn_direction)
+
+    # Check so motors don't get over/underpowered
+    if motor_power > 100:
+        motor_power = 100
+    elif motor_power < 75:
+        motor_power = 80
 
     return motor_power, turn_direction
 
@@ -185,6 +195,7 @@ past_position_relative = 0
 past_coordinates = [[0, 0], [0, 0]] # First row is most recent data, second row is second most recent data
 past_distance = [0, 0] # [0] = Most recent data; [1] = Second most recent data
 past_angle = [0, 0] # [0] = Most recent data; [1] = Second most recent data
+measurement_time = [0, 0] # Stores time that measurement was made
 
 undetected_counter = 0 # Counts number of times car did not detect ball in a row
 
@@ -207,6 +218,8 @@ for frame in camera.capture_continuous(raw_capture, format="bgr", use_video_port
         current_angle = calc_angle(object_center_coordinates, current_distance)
 
         # Stores the values as past values
+        measurement_time[1] = measurement_time[0]
+        measurement_time[0] = time.perf_counter()
         past_coordinates[1][0] = past_coordinates[0][0]
         past_coordinates[1][1] = past_coordinates[0][1]
         past_coordinates[0][0] = object_center_coordinates[0]
@@ -267,9 +280,9 @@ for frame in camera.capture_continuous(raw_capture, format="bgr", use_video_port
             undetected_counter = 0
 
             # Deterines correct course of action
-            motor_power, direction = intelligent_search(past_position_relative, past_coordinates, past_angle)
+            power, direction = intelligent_search(past_position_relative, past_coordinates, past_distance, measurement_time)
 
-            pwm_motor_2.ChangeDutyCycle(motor_power)
+            pwm_motor_2.ChangeDutyCycle(power)
             time.sleep(0.05)
 
             if direction == 0: # Turn left
