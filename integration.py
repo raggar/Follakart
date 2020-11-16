@@ -61,14 +61,54 @@ def detect_object(image):
 
     return -1, -1, [-1, -1], [-1, -1] # If object not found
 
-def calcDistance(object_dimensions):
+def calc_distance(object_dimensions):
     focalLen = 612.8
     return (6 * focalLen) / object_dimensions[0]
 
-def calcAngle(obj_coordinates, distance):
+def calc_angle(obj_coordinates, distance):
     pixelDistanceFromCenter = abs(320 - obj_coordinates[0])
     angle = math.degrees(math.atan((pixelDistanceFromCenter * 0.015) / distance))
     return angle
+
+def intelligent_search(position_relative, coordinates, distance, angle):
+    turn_direction = 0 # 1 for right, 0 for left
+    motor_power = 0 # Desired motor power
+
+    # Uses the past position of the object relative to the frame to determine which direction it is headed in.
+    if position_relative == 1 or position_relative == 0:
+        turn_direction = position_relative
+    elif position_relative == 2:
+        # If object happened to be in the centre of the frame (left the frame from the top), robot uses coordinates to predict object's trajectory and turns accordingly
+        # Coordinate system
+        #           Top
+        # (0, 0)              (x, 0)
+        #
+        #                               Right
+        #
+        # (0, y)              (x, y)
+        # We only care about x value when determining trajectory (since we know the ball exited from the top)
+
+        if coordinates[0][0] >= coordinates[1][0]: # Object was moving to the right
+            turn_direction = 1
+        else:
+            turn_direction = 0
+
+    # Uses the past measurements of the object to determine appropriate motor power
+    # Minimum value will be 75, and maximum will be 100
+
+    # Methodology
+    # We can estimate the speed with which the object moved by looking at its cahange in x coordinates.
+    # We can use distance and angle to adjust this estimation for a more accurate result
+
+
+    return motor_power, turn_direction
+
+def kill_program():
+    pwm_motor_1.stop()
+    pwm_motor_2.stop()
+    GPIO.cleanup()
+    print("Cleanup done")
+
 
 ### METHOD BLOCK ENDS ###
 
@@ -137,8 +177,14 @@ pwm_motor_2.start(70)
 # Information about Object
 object_position_relative = 0  # 0 means left of center, 1 means right, 2 means center, -1 means not found
 object_contour_area = 0  # Gives indication of how close the object is to the car
-object_coordinates_in_frame = [0, 0]  # Coordinates of object in the frame
+object_center_coordinates = [0, 0]  # Coordinates of object in the frame
 object_rectangle_width_height = [0, 0]  # Width and height of bounding rectangle
+
+# Stores past information about the Object
+past_position_relative = 0
+past_coordinates = [[0, 0], [0, 0]] # First row is most recent data, second row is second most recent data
+past_distance = [0, 0] # [0] = Most recent data; [1] = Second most recent data
+past_angle = [0, 0] # [0] = Most recent data; [1] = Second most recent data
 
 undetected_counter = 0 # Counts number of times car did not detect ball in a row
 
@@ -157,8 +203,19 @@ for frame in camera.capture_continuous(raw_capture, format="bgr", use_video_port
         undetected_counter = 0
 
         # Calculates distances
-        current_distance = calcDistance(object_rectangle_width_height)
-        current_angle = calcAngle(object_coordinates_in_frame, current_distance)
+        current_distance = calc_distance(object_rectangle_width_height)
+        current_angle = calc_angle(object_center_coordinates, current_distance)
+
+        # Stores the values as past values
+        past_coordinates[1][0] = past_coordinates[0][0]
+        past_coordinates[1][1] = past_coordinates[0][1]
+        past_coordinates[0][0] = object_center_coordinates[0]
+        past_coordinates[0][1] = object_center_coordinates[1]
+        past_position_relative = object_position_relative
+        past_distance[1] = past_distance[0]
+        past_angle[1] = past_angle[0]
+        past_distance[0] = current_distance
+        past_angle[0] = current_angle
 
         # Determines required motor output
         if object_position_relative == 0 or object_position_relative == 1:
@@ -208,12 +265,24 @@ for frame in camera.capture_continuous(raw_capture, format="bgr", use_video_port
         undetected_counter = undetected_counter + 1
         if undetected_counter == 5:
             undetected_counter = 0
-            pwm_motor_2.ChangeDutyCycle(80)
+
+            # Deterines correct course of action
+            motor_power, direction = intelligent_search(past_position_relative, past_coordinates, past_angle)
+
+            pwm_motor_2.ChangeDutyCycle(motor_power)
             time.sleep(0.05)
-            GPIO.output(motor_1_forward, GPIO.LOW)
-            GPIO.output(motor_1_backward, GPIO.LOW)
-            GPIO.output(motor_2_forward, GPIO.HIGH)
-            GPIO.output(motor_2_backward, GPIO.LOW)
+
+            if direction == 0: # Turn left
+                GPIO.output(motor_1_forward, GPIO.LOW)
+                GPIO.output(motor_1_backward, GPIO.LOW)
+                GPIO.output(motor_2_forward, GPIO.HIGH)
+                GPIO.output(motor_2_backward, GPIO.LOW)
+            else: # Turn Right
+                GPIO.output(motor_1_forward, GPIO.HIGH)
+                GPIO.output(motor_1_backward, GPIO.LOW)
+                GPIO.output(motor_2_forward, GPIO.LOW)
+                GPIO.output(motor_2_backward, GPIO.LOW)
+
             time.sleep(0.4)
 
 
@@ -224,11 +293,7 @@ for frame in camera.capture_continuous(raw_capture, format="bgr", use_video_port
 
     time.sleep(0.05)
 
-print("Done")
-
-pwm_motor_1.stop()
-pwm_motor_2.stop()
-GPIO.cleanup()
+kill_program()
 
 ### MAIN BLOCK ENDS ###
 
