@@ -31,9 +31,13 @@ class PD:
 
     def get_output(self, current, desired):
         # print("Getting output") # Debugging purposes
-        # print("Input vlaues: ", str(current), " ", str(desired))
+        # print("Input values: ", str(current), " ", str(desired))
 
         error = abs(desired - current)
+        print("Error: ", error)
+
+        if error < 1:
+            return 0
 
         # Determines derivative value
         self.past_positions[1] = self.past_positions[0]

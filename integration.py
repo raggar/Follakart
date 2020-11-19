@@ -8,10 +8,10 @@ import RPi.GPIO as GPIO
 import math
 import pd
 
+
 ### METHOD BLOCK BEGINS ###
 
 def detect_object(image):
-
     # Arrays store the minimum and maximum values for each HSV value. Refer to "hsv_value_setup.py"
     minimum_values = np.array([7, 0, 0])
     maximum_values = np.array([150, 255, 255])
@@ -23,6 +23,8 @@ def detect_object(image):
 
     blur_image = cv2.blur(image_HSV_specific, (8, 8))  # kernal of 8x8 used
 
+    # cv2.imshow("Blur image", blur_image)
+
     # Finds contours in image (which can be used to identify shapes)
     contours, _ = cv2.findContours(blur_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     contours = sorted(contours, key=lambda x: cv2.contourArea(x), reverse=True)
@@ -31,7 +33,7 @@ def detect_object(image):
     for contour in contours:
         shape_area = cv2.contourArea(contour)
 
-        if shape_area > 2400 and shape_area < 160000:
+        if shape_area > 1800 and shape_area < 160000:
             perimeter = cv2.arcLength(contour, True)
 
             # accuracy parameter - maximum distance from contour to approximated contour
@@ -44,12 +46,12 @@ def detect_object(image):
                 # Gets parameters for a rectangle around object
                 x, y, width, height = cv2.boundingRect(verticies)
 
-                object_center_coordinates = [x + width/2, y - height/2]
+                object_center_coordinates = [x + width / 2, y - height / 2]
                 object_rectangle_width_height = [width, height]
 
-                if object_center_coordinates[0] < (video_frame_width/2-30):  # Left
+                if object_center_coordinates[0] < (video_frame_width / 2 - 60):  # Left
                     object_position_relative = 0
-                elif object_center_coordinates[0] > (video_frame_width/2+30):  # Right
+                elif object_center_coordinates[0] > (video_frame_width / 2 + 60):  # Right
                     object_position_relative = 1
                 else:
                     object_position_relative = 2
@@ -59,20 +61,24 @@ def detect_object(image):
                 # Exits for loop (and function) after the ball is found to reduce execution time
                 return object_position_relative, shape_area, object_center_coordinates, object_rectangle_width_height
 
-    return -1, -1, [-1, -1], [-1, -1] # If object not found
+    return -1, -1, [-1, -1], [-1, -1]  # If object not found
+
 
 def calc_distance(object_dimensions):
     focalLen = 612.8
     return (6 * focalLen) / object_dimensions[0]
 
+
 def calc_angle(obj_coordinates, distance):
     pixelDistanceFromCenter = abs(320 - obj_coordinates[0])
     angle = math.degrees(math.atan((pixelDistanceFromCenter * 0.015) / distance))
+    print("Measurements: ", distance, " ", angle)
     return angle
 
+
 def intelligent_search(position_relative, coordinates, distance, times):
-    turn_direction = 0 # 1 for right, 0 for left
-    motor_power = 0 # Desired motor power
+    turn_direction = 0  # 1 for right, 0 for left
+    motor_power = 0  # Desired motor power
 
     # Uses the past position of the object relative to the frame to determine which direction it is headed in.
     if position_relative == 1 or position_relative == 0:
@@ -88,7 +94,7 @@ def intelligent_search(position_relative, coordinates, distance, times):
         # (0, y)              (x, y)
         # We only care about x value when determining trajectory (since we know the ball exited from the top)
 
-        if coordinates[0][0] >= coordinates[1][0]: # Object was moving to the right
+        if coordinates[0][0] >= coordinates[1][0]:  # Object was moving to the right
             turn_direction = 1
         else:
             turn_direction = 0
@@ -98,12 +104,16 @@ def intelligent_search(position_relative, coordinates, distance, times):
     # Methodology
     # We can estimate the speed with which the object moved by looking at its cahange in x coordinates.
     # We can use distance to adjust this estimation to get the desired motor output
-    estimated_speed = (coordinates[0][0] - coordinates[1][0])/(times[0] - times[1])
-    scale_factor = 5/distance
+    estimated_speed = (coordinates[0][0] - coordinates[1][0]) / (times[0] - times[1])
+
+    if distance != 0:
+        scale_factor = 5 / distance
+    else:
+        scale_factor = 5
 
     motor_power = estimated_speed * scale_factor
 
-    print(estimated_speed, " ", motor_power, " ", turn_direction)
+    print("Undetected Motors: ", estimated_speed, " ", motor_power, " ", turn_direction)
 
     # Check so motors don't get over/underpowered
     if motor_power > 100:
@@ -113,6 +123,7 @@ def intelligent_search(position_relative, coordinates, distance, times):
 
     return motor_power, turn_direction
 
+
 def kill_program():
     pwm_motor_1.stop()
     pwm_motor_2.stop()
@@ -121,7 +132,6 @@ def kill_program():
 
 
 ### METHOD BLOCK ENDS ###
-
 
 
 ### MAIN BLOCK BEGINS ###
@@ -144,15 +154,15 @@ current_angle = 0
 desired_distance = 0
 current_distance = 0
 
-raw_capture = PiRGBArray(camera, size=(640, 480)) # Generates a 3D RGB array and stores it in rawCapture
-time.sleep(0.1) # Wait a certain number of seconds to allow the camera time to warmup
+raw_capture = PiRGBArray(camera, size=(640, 480))  # Generates a 3D RGB array and stores it in rawCapture
+time.sleep(0.1)  # Wait a certain number of seconds to allow the camera time to warmup
 
-angle_pd = pd.PD(5.5, 2, 75, 90)  # Constructs PD class for when the robot needs to rotate
+angle_pd = pd.PD(5.5, 2, 80, 90)  # Constructs PD class for when the robot needs to rotate
 forward_pd = pd.PD(12, 5, 65, 90)  # Constructs PD class for when the robot needs to move forwards and backwards
 
 # Desired position for the ball with respect to the car
 desired_angle = 0
-desired_distance = 35
+desired_distance = 50
 
 # Define ports for motor 1 (Left)
 motor_1_forward = 24
@@ -192,25 +202,29 @@ object_rectangle_width_height = [0, 0]  # Width and height of bounding rectangle
 
 # Stores past information about the Object
 past_position_relative = 0
-past_coordinates = [[0, 0], [0, 0]] # First row is most recent data, second row is second most recent data
-past_distance = [0, 0] # [0] = Most recent data; [1] = Second most recent data
-past_angle = [0, 0] # [0] = Most recent data; [1] = Second most recent data
-measurement_time = [0, 0] # Stores time that measurement was made
+past_coordinates = [[0, 0], [0, 0]]  # First row is most recent data, second row is second most recent data
+past_distance = [0, 0]  # [0] = Most recent data; [1] = Second most recent data
+past_angle = [0, 0]  # [0] = Most recent data; [1] = Second most recent data
+measurement_time = [0, 0]  # Stores time that measurement was made
 
-undetected_counter = 0 # Counts number of times car did not detect ball in a row
+undetected_counter = 0  # Counts number of times car did not detect ball in a row
 
-for frame in camera.capture_continuous(raw_capture, format="bgr", use_video_port=True): # Capture frames continuously from the camera
+for frame in camera.capture_continuous(raw_capture, format="bgr",
+                                       use_video_port=True):  # Capture frames continuously from the camera
 
-    image = frame.array # Grab the raw NumPy array representing the image
+    print("------------------------")
 
-    object_position_relative, object_contour_area, object_center_coordinates, object_rectangle_width_height = detect_object(image)  # Calls method to process image and identify object
+    image = frame.array  # Grab the raw NumPy array representing the image
+
+    object_position_relative, object_contour_area, object_center_coordinates, object_rectangle_width_height = detect_object(
+        image)  # Calls method to process image and identify object
 
     cv2.imshow("Webcam_Input", image)
     cv2.waitKey(50)
 
-    raw_capture.truncate(0) # Clear the stream in preparation for the next frame
+    raw_capture.truncate(0)  # Clear the stream in preparation for the next frame
 
-    if object_contour_area != -1: # If object is found
+    if object_contour_area != -1:  # If object is found
         undetected_counter = 0
 
         # Calculates distances
@@ -220,6 +234,7 @@ for frame in camera.capture_continuous(raw_capture, format="bgr", use_video_port
         # Stores the values as past values
         measurement_time[1] = measurement_time[0]
         measurement_time[0] = time.perf_counter()
+        # print("Measurement Time: ", measurement_time[0])
         past_coordinates[1][0] = past_coordinates[0][0]
         past_coordinates[1][1] = past_coordinates[0][1]
         past_coordinates[0][0] = object_center_coordinates[0]
@@ -232,8 +247,10 @@ for frame in camera.capture_continuous(raw_capture, format="bgr", use_video_port
 
         # Determines required motor output
         if object_position_relative == 0 or object_position_relative == 1:
+            print("Angle ", object_position_relative)
             motor_pwm = angle_pd.get_output(current_angle, desired_angle)
         elif object_position_relative == 2 or object_position_relative == -1:
+            print("Centre", object_position_relative)
             motor_pwm = forward_pd.get_output(current_distance, desired_distance)
 
         # print(current_distance, " ", current_angle, " ", motor_pwm, " ", object_position_relative, " ", object_center_coordinates, " ", object_rectangle_width_height)  # Debugging
@@ -280,24 +297,27 @@ for frame in camera.capture_continuous(raw_capture, format="bgr", use_video_port
             undetected_counter = 0
 
             # Deterines correct course of action
-            power, direction = intelligent_search(past_position_relative, past_coordinates, past_distance, measurement_time)
+            if measurement_time[0] != 0: # Condition here so there is no divide by zero case
+                power, direction = intelligent_search(past_position_relative, past_coordinates, current_distance,measurement_time)
+            else:
+                power = 80
+                direction = 0
 
             pwm_motor_2.ChangeDutyCycle(power)
             time.sleep(0.05)
 
-            if direction == 0: # Turn left
+            if direction == 0:  # Turn left
                 GPIO.output(motor_1_forward, GPIO.LOW)
                 GPIO.output(motor_1_backward, GPIO.LOW)
                 GPIO.output(motor_2_forward, GPIO.HIGH)
                 GPIO.output(motor_2_backward, GPIO.LOW)
-            else: # Turn Right
+            else:  # Turn Right
                 GPIO.output(motor_1_forward, GPIO.HIGH)
                 GPIO.output(motor_1_backward, GPIO.LOW)
                 GPIO.output(motor_2_forward, GPIO.LOW)
                 GPIO.output(motor_2_backward, GPIO.LOW)
 
             time.sleep(0.4)
-
 
     GPIO.output(motor_1_forward, GPIO.LOW)
     GPIO.output(motor_1_backward, GPIO.LOW)
@@ -309,4 +329,5 @@ for frame in camera.capture_continuous(raw_capture, format="bgr", use_video_port
 kill_program()
 
 ### MAIN BLOCK ENDS ###
+
 
