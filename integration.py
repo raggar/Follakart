@@ -8,7 +8,6 @@ import RPi.GPIO as GPIO
 import math
 import pd
 
-
 ### METHOD BLOCK BEGINS ###
 
 def detect_object(image):
@@ -72,7 +71,6 @@ def calc_distance(object_dimensions):
 def calc_angle(obj_coordinates, distance):
     pixelDistanceFromCenter = abs(320 - obj_coordinates[0])
     angle = math.degrees(math.atan((pixelDistanceFromCenter * 0.015) / distance))
-    print("Measurements: ", distance, " ", angle)
     return angle
 
 
@@ -80,11 +78,12 @@ def intelligent_search(position_relative, coordinates, distance, times):
     turn_direction = 0  # 1 for right, 0 for left
     motor_power = 0  # Desired motor power
 
-    # Uses the past position of the object relative to the frame to determine which direction it is headed in.
-    if position_relative == 1 or position_relative == 0:
+    # Uses the past position of the object relative to the car to determine which direction it is headed in.
+    if position_relative == 1 or position_relative == 0: # If ball was on the left or right of frame before leaving
         turn_direction = position_relative
-    elif position_relative == 2:
-        # If object happened to be in the centre of the frame (left the frame from the top), robot uses coordinates to predict object's trajectory and turns accordingly
+    elif position_relative == 2: # If ball was in centre of frame before leaving
+
+        # If the object happened to be in the centre of the frame when it left the image, the robot uses the past coordinates of the object to predict its trajectory
         # Coordinate system
         #           Top
         # (0, 0)              (x, 0)
@@ -101,32 +100,35 @@ def intelligent_search(position_relative, coordinates, distance, times):
 
     # Uses the past measurements of the object to determine appropriate motor power
     # Minimum value will be 80, and maximum will be 100
+
     # Methodology
-    # We can estimate the speed with which the object moved by looking at its cahange in x coordinates.
-    # We can use distance to adjust this estimation to get the desired motor output
+    # We can estimate the speed with which the object moved by looking at the change in its x coordinates.
+    # We can use the measured object distance to adjust this estimation to get the desired motor output
     estimated_speed = (coordinates[0][0] - coordinates[1][0]) / (times[0] - times[1])
 
+    # Ensures we do not have a divide by zero case
     if distance != 0:
-        scale_factor = 5 / distance
+        scale_factor = 3 / distance
     else:
-        scale_factor = 5
+        scale_factor = 3
 
     motor_power = estimated_speed * scale_factor
-
-    print("Undetected Motors: ", estimated_speed, " ", motor_power, " ", turn_direction)
 
     # Check so motors don't get over/underpowered
     if motor_power > 100:
         motor_power = 100
-    elif motor_power < 75:
+    elif motor_power < 80:
         motor_power = 80
 
     return motor_power, turn_direction
 
 
 def kill_program():
+    # Kills PWMs
     pwm_motor_1.stop()
     pwm_motor_2.stop()
+
+    # Cleans up GPIO (sets all to LOW)
     GPIO.cleanup()
     print("Cleanup done")
 
@@ -148,19 +150,17 @@ video_frame_width = 640
 video_frame_height = 480
 video_brightness_adjustment = 7
 
-# Positioning Characteristics
-desired_angle = 0
-current_angle = 0
-desired_distance = 0
-current_distance = 0
-
 raw_capture = PiRGBArray(camera, size=(640, 480))  # Generates a 3D RGB array and stores it in rawCapture
 time.sleep(0.1)  # Wait a certain number of seconds to allow the camera time to warmup
 
 angle_pd = pd.PD(5.5, 2, 80, 90)  # Constructs PD class for when the robot needs to rotate
 forward_pd = pd.PD(12, 5, 65, 90)  # Constructs PD class for when the robot needs to move forwards and backwards
 
-# Desired position for the ball with respect to the car
+# Object Position Parameters
+current_angle = 0
+current_distance = 0
+
+# Desired position for the object with respect to the car
 desired_angle = 0
 desired_distance = 50
 
@@ -194,13 +194,13 @@ pwm_motor_2 = GPIO.PWM(motor_2_en, 1000)
 pwm_motor_1.start(75)
 pwm_motor_2.start(70)
 
-# Information about Object
+# Information about the object image within the frame
 object_position_relative = 0  # 0 means left of center, 1 means right, 2 means center, -1 means not found
 object_contour_area = 0  # Gives indication of how close the object is to the car
 object_center_coordinates = [0, 0]  # Coordinates of object in the frame
 object_rectangle_width_height = [0, 0]  # Width and height of bounding rectangle
 
-# Stores past information about the Object
+# Stores past information about the object
 past_position_relative = 0
 past_coordinates = [[0, 0], [0, 0]]  # First row is most recent data, second row is second most recent data
 past_distance = [0, 0]  # [0] = Most recent data; [1] = Second most recent data
@@ -209,20 +209,16 @@ measurement_time = [0, 0]  # Stores time that measurement was made
 
 undetected_counter = 0  # Counts number of times car did not detect ball in a row
 
-for frame in camera.capture_continuous(raw_capture, format="bgr",
-                                       use_video_port=True):  # Capture frames continuously from the camera
-
-    print("------------------------")
+for frame in camera.capture_continuous(raw_capture, format="bgr", use_video_port=True):  # Iterates over each frame in the video stream
 
     image = frame.array  # Grab the raw NumPy array representing the image
 
-    object_position_relative, object_contour_area, object_center_coordinates, object_rectangle_width_height = detect_object(
-        image)  # Calls method to process image and identify object
+    # Calls method to process image and identify object
+    object_position_relative, object_contour_area, object_center_coordinates, object_rectangle_width_height = detect_object(image)
 
-    cv2.imshow("Webcam_Input", image)
-    cv2.waitKey(50)
+    time.sleep(0.05)
 
-    raw_capture.truncate(0)  # Clear the stream in preparation for the next frame
+    raw_capture.truncate(0)  # Clear the video stream in preparation for the next frame
 
     if object_contour_area != -1:  # If object is found
         undetected_counter = 0
@@ -231,10 +227,9 @@ for frame in camera.capture_continuous(raw_capture, format="bgr",
         current_distance = calc_distance(object_rectangle_width_height)
         current_angle = calc_angle(object_center_coordinates, current_distance)
 
-        # Stores the values as past values
+        # Stores the current values as past values (Also adjusts arrays to make room for the past values)
         measurement_time[1] = measurement_time[0]
         measurement_time[0] = time.perf_counter()
-        # print("Measurement Time: ", measurement_time[0])
         past_coordinates[1][0] = past_coordinates[0][0]
         past_coordinates[1][1] = past_coordinates[0][1]
         past_coordinates[0][0] = object_center_coordinates[0]
@@ -245,26 +240,27 @@ for frame in camera.capture_continuous(raw_capture, format="bgr",
         past_distance[0] = current_distance
         past_angle[0] = current_angle
 
-        # Determines required motor output
-        if object_position_relative == 0 or object_position_relative == 1:
-            print("Angle ", object_position_relative)
+        # Determines desired motor output using PIDs
+        if object_position_relative == 0 or object_position_relative == 1: # If object is not centered, we want rotational motion
             motor_pwm = angle_pd.get_output(current_angle, desired_angle)
-        elif object_position_relative == 2 or object_position_relative == -1:
-            print("Centre", object_position_relative)
+        elif object_position_relative == 2 or object_position_relative == -1: # If object is centered, we want translational motion
             motor_pwm = forward_pd.get_output(current_distance, desired_distance)
 
-        # print(current_distance, " ", current_angle, " ", motor_pwm, " ", object_position_relative, " ", object_center_coordinates, " ", object_rectangle_width_height)  # Debugging
-
         # Powers motors
-        if object_position_relative == 0:  # Left
+        if object_position_relative == 0:  # Turn left
+
+            # All if statements follow a similar structure, so code will only be commented here to reduce redundancy.
+
+            # Adjusts PWM values
             pwm_motor_2.ChangeDutyCycle(motor_pwm)
-            time.sleep(0.05)
+            time.sleep(0.05) # Gives time for PWM to adjust
+            # Sets GPIO pins to HIGH and LOW to exhibit desired behaviour
             GPIO.output(motor_1_forward, GPIO.LOW)
             GPIO.output(motor_1_backward, GPIO.LOW)
             GPIO.output(motor_2_forward, GPIO.HIGH)
             GPIO.output(motor_2_backward, GPIO.LOW)
-            time.sleep(0.15)
-        elif object_position_relative == 1:  # Right
+            time.sleep(0.15) # Lets motors run for 150 ms (This is done because of traction issues discussed in the report)
+        elif object_position_relative == 1:  # Turn right
             pwm_motor_1.ChangeDutyCycle(motor_pwm)
             time.sleep(0.05)
             GPIO.output(motor_1_forward, GPIO.HIGH)
@@ -272,8 +268,8 @@ for frame in camera.capture_continuous(raw_capture, format="bgr",
             GPIO.output(motor_2_forward, GPIO.LOW)
             GPIO.output(motor_2_backward, GPIO.LOW)
             time.sleep(0.15)
-        elif object_position_relative == 2:  # Centre
-            if current_distance > desired_distance:  # If car is farther than desired targeta
+        elif object_position_relative == 2:  # Move forwards or backwards
+            if current_distance > desired_distance:  # If car needs to move forwards (farther to the target than desired)
                 pwm_motor_1.ChangeDutyCycle(motor_pwm)
                 pwm_motor_2.ChangeDutyCycle(motor_pwm)
                 time.sleep(0.05)
@@ -281,7 +277,7 @@ for frame in camera.capture_continuous(raw_capture, format="bgr",
                 GPIO.output(motor_1_backward, GPIO.LOW)
                 GPIO.output(motor_2_forward, GPIO.HIGH)
                 GPIO.output(motor_2_backward, GPIO.LOW)
-            elif current_distance < desired_distance:  # If car is closer than desired target
+            elif current_distance < desired_distance:  # If car needs to move backwards (closer to the target than desired)
                 pwm_motor_1.ChangeDutyCycle(motor_pwm)
                 pwm_motor_2.ChangeDutyCycle(motor_pwm)
                 time.sleep(0.05)
@@ -292,39 +288,47 @@ for frame in camera.capture_continuous(raw_capture, format="bgr",
             time.sleep(0.2)
 
     else:  # Object not found
-        undetected_counter = undetected_counter + 1
-        if undetected_counter == 5:
+        undetected_counter = undetected_counter + 1 # Increments undetected counter
+
+        if undetected_counter == 5: # Only starts searching macros when we have not detected the object in five consecutive frames
             undetected_counter = 0
 
-            # Deterines correct course of action
-            if measurement_time[0] != 0: # Condition here so there is no divide by zero case
+            # Uses intelligent_search() to determine desired turn direction and motor power
+            if measurement_time[0] != 0: # Condition here so there is no divide by zero case in the intelligent_search() method
                 power, direction = intelligent_search(past_position_relative, past_coordinates, current_distance,measurement_time)
             else:
                 power = 80
                 direction = 0
 
-            pwm_motor_2.ChangeDutyCycle(power)
-            time.sleep(0.05)
-
             if direction == 0:  # Turn left
+                pwm_motor_2.ChangeDutyCycle(power)
+                time.sleep(0.05)
                 GPIO.output(motor_1_forward, GPIO.LOW)
                 GPIO.output(motor_1_backward, GPIO.LOW)
                 GPIO.output(motor_2_forward, GPIO.HIGH)
                 GPIO.output(motor_2_backward, GPIO.LOW)
             else:  # Turn Right
+                pwm_motor_1.ChangeDutyCycle(power)
+                time.sleep(0.05)
                 GPIO.output(motor_1_forward, GPIO.HIGH)
                 GPIO.output(motor_1_backward, GPIO.LOW)
                 GPIO.output(motor_2_forward, GPIO.LOW)
                 GPIO.output(motor_2_backward, GPIO.LOW)
 
-            time.sleep(0.4)
+            time.sleep(0.4) # Runs the macros for 400 ms before turning off the motors
 
+    # Turns off motors before processing next image
     GPIO.output(motor_1_forward, GPIO.LOW)
     GPIO.output(motor_1_backward, GPIO.LOW)
     GPIO.output(motor_2_forward, GPIO.LOW)
     GPIO.output(motor_2_backward, GPIO.LOW)
 
+    # If key 'q' is pressed, for loop is exited and program terminates
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
     time.sleep(0.05)
+
 
 kill_program()
 
