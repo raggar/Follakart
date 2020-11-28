@@ -71,7 +71,6 @@ def calc_distance(object_dimensions):
 def calc_angle(obj_coordinates, distance):
     pixelDistanceFromCenter = abs(320 - obj_coordinates[0])
     angle = math.degrees(math.atan((pixelDistanceFromCenter * 0.015) / distance))
-    print("Measurements: ", distance, " ", angle)
     return angle
 
 
