@@ -3,35 +3,40 @@ from picamera.array import PiRGBArray  # Generates a 3D RGB array
 from picamera import PiCamera  # Provides a Python interface for the RPi Camera Module
 import time  # Provides time-related functions
 import cv2  # OpenCV library
-import numpy as np
-import RPi.GPIO as GPIO
+import numpy as np 
+import RPi.GPIO as GPIO # Provides a Python interface for the RPi GPIO pins and PWM
 import math
-import pd
+import pd # Class object for Proportional Derivative (PD) controller
 
 ### METHOD BLOCK BEGINS ###
 
 def detect_object(image):
-    # Arrays store the minimum and maximum values for each HSV value. Refer to "hsv_value_setup.py"
+    # Arrays store the minimum and maximum values for each HSV value.
     minimum_values = np.array([7, 0, 0])
     maximum_values = np.array([150, 255, 255])
 
     # Converts the image from BGR to type HSV
     image_HSV = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
+    # Filters image so only pixels with a colour that falls within the HSV value range (defined in arrays above) appear black on a white canvas
     image_HSV_specific = cv2.inRange(image_HSV, minimum_values, maximum_values)
 
+    # Blurs image 
     blur_image = cv2.blur(image_HSV_specific, (8, 8))  # kernal of 8x8 used
 
-    # cv2.imshow("Blur image", blur_image)
+    # cv2.imshow("Blur image", blur_image) # Debugging purposes 
 
-    # Finds contours in image (which can be used to identify shapes)
+    # Finds contours in image (which can be used to identify shapes). Sores contours in an array
     contours, _ = cv2.findContours(blur_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    
+    # Sorts contours array in descending order based on the area of the enclosed shapes
     contours = sorted(contours, key=lambda x: cv2.contourArea(x), reverse=True)
 
     # each individual contour is a Numpy array of (x,y) coordinates of boundary points of the object.
     for contour in contours:
         shape_area = cv2.contourArea(contour)
 
+        # If shape has an appropriate area
         if shape_area > 1800 and shape_area < 160000:
             perimeter = cv2.arcLength(contour, True)
 
@@ -39,12 +44,13 @@ def detect_object(image):
             episilon = 0.03 * perimeter
             verticies = cv2.approxPolyDP(contour, episilon, True)  # Adjust values as needed
 
-            # Circles will still have verticies. If we can find a good balance then we are solid
+            # Circles will still have verticies, but they will be higher than most shapes
             if len(verticies) > 6:
 
                 # Gets parameters for a rectangle around object
                 x, y, width, height = cv2.boundingRect(verticies)
 
+                # Sets return data
                 object_center_coordinates = [x + width / 2, y - height / 2]
                 object_rectangle_width_height = [width, height]
 
@@ -55,7 +61,7 @@ def detect_object(image):
                 else:
                     object_position_relative = 2
 
-                cv2.rectangle(image, (x, y), (x + width, y + height), (0, 255, 0), 3)  # Draws rectangle on image
+                # cv2.rectangle(image, (x, y), (x + width, y + height), (0, 255, 0), 3)  # Draws rectangle on image. For debugging purposes
 
                 # Exits for loop (and function) after the ball is found to reduce execution time
                 return object_position_relative, shape_area, object_center_coordinates, object_rectangle_width_height
@@ -63,17 +69,18 @@ def detect_object(image):
     return -1, -1, [-1, -1], [-1, -1]  # If object not found
 
 
+# Calculates straight-line distance from the cart camera to the object
 def calc_distance(object_dimensions):
     focalLen = 612.8
     return (6 * focalLen) / object_dimensions[0]
 
-
+# Calculates the angle between cart camera to the object
 def calc_angle(obj_coordinates, distance):
     pixelDistanceFromCenter = abs(320 - obj_coordinates[0])
     angle = math.degrees(math.atan((pixelDistanceFromCenter * 0.015) / distance))
     return angle
 
-
+# Macro called if object is not found in frame
 def intelligent_search(position_relative, coordinates, distance, times):
     turn_direction = 0  # 1 for right, 0 for left
     motor_power = 0  # Desired motor power
@@ -108,9 +115,9 @@ def intelligent_search(position_relative, coordinates, distance, times):
 
     # Ensures we do not have a divide by zero case
     if distance != 0:
-        scale_factor = 3 / distance
+        scale_factor = 1 / distance
     else:
-        scale_factor = 3
+        scale_factor = 1
 
     motor_power = estimated_speed * scale_factor
 
@@ -122,7 +129,7 @@ def intelligent_search(position_relative, coordinates, distance, times):
 
     return motor_power, turn_direction
 
-
+# Called when program terminates 
 def kill_program():
     # Kills PWMs
     pwm_motor_1.stop()
@@ -144,7 +151,7 @@ camera = PiCamera()
 # Set the camera resolution
 camera.resolution = (640, 480)
 
-# Set the number of frames per second
+# Set camera parameters
 camera.framerate = 32
 video_frame_width = 640
 video_frame_height = 480
@@ -160,7 +167,7 @@ forward_pd = pd.PD(12, 5, 65, 90)  # Constructs PD class for when the robot need
 current_angle = 0
 current_distance = 0
 
-# Desired position for the object with respect to the car
+# Desired position for the object with respect to the cart
 desired_angle = 0
 desired_distance = 50
 
@@ -207,7 +214,7 @@ past_distance = [0, 0]  # [0] = Most recent data; [1] = Second most recent data
 past_angle = [0, 0]  # [0] = Most recent data; [1] = Second most recent data
 measurement_time = [0, 0]  # Stores time that measurement was made
 
-undetected_counter = 0  # Counts number of times car did not detect ball in a row
+undetected_counter = 0  # Counts number of times cart did not detect ball in a row
 
 for frame in camera.capture_continuous(raw_capture, format="bgr", use_video_port=True):  # Iterates over each frame in the video stream
 
@@ -269,7 +276,7 @@ for frame in camera.capture_continuous(raw_capture, format="bgr", use_video_port
             GPIO.output(motor_2_backward, GPIO.LOW)
             time.sleep(0.15)
         elif object_position_relative == 2:  # Move forwards or backwards
-            if current_distance > desired_distance:  # If car needs to move forwards (farther to the target than desired)
+            if current_distance > desired_distance:  # If car needs to move forwards
                 pwm_motor_1.ChangeDutyCycle(motor_pwm)
                 pwm_motor_2.ChangeDutyCycle(motor_pwm)
                 time.sleep(0.05)
@@ -277,7 +284,7 @@ for frame in camera.capture_continuous(raw_capture, format="bgr", use_video_port
                 GPIO.output(motor_1_backward, GPIO.LOW)
                 GPIO.output(motor_2_forward, GPIO.HIGH)
                 GPIO.output(motor_2_backward, GPIO.LOW)
-            elif current_distance < desired_distance:  # If car needs to move backwards (closer to the target than desired)
+            elif current_distance < desired_distance:  # If car needs to move backwards
                 pwm_motor_1.ChangeDutyCycle(motor_pwm)
                 pwm_motor_2.ChangeDutyCycle(motor_pwm)
                 time.sleep(0.05)
@@ -324,12 +331,11 @@ for frame in camera.capture_continuous(raw_capture, format="bgr", use_video_port
     GPIO.output(motor_2_backward, GPIO.LOW)
 
     # If key 'q' is pressed, for loop is exited and program terminates
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    if cv2.waitKey(0.3) & 0xFF == ord('q'):
         break
 
-    time.sleep(0.05)
 
-
+# Cleans up program and resets hardware
 kill_program()
 
 ### MAIN BLOCK ENDS ###
