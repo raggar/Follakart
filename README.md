@@ -1,4 +1,20 @@
-# Graduates Of Stack Overflow
+# Follakart (Software Engineering 2020 Project)
+
+Follakart is an autonomous car that will track and follow a predefined object. Powered using Raspberry Pi, a camera module, and DC motors, Follakart will analyze video frames to locate an object (hereby referred to as the “tracked object”) and position itself to keep the tracked object near the centre of the camera frame. 
+
+## Components
+
+### Hardware
+The cart is powered by a raspberry pi, picamera, and two motors that are all fitted within a compact frame. Early development featured unit testing to ensure each component worked as intended. In later stages, wiring all components together and creating the aesthetic exterior chassis took precedence. It took two iterations, but our current model’s wiring is better organized and the layout puts more weight at the back, improving traction. 
+
+### Computer Vision
+To consistently and adequately track our desired object, we used computer vision, specifically the OpenCV library in Python. Starting off, we experimented with several different methods of tracking such as shape, silhouette and kernel tracking. Upon weighing each method's pros and cons we settled upon using HSV or colour detection, and thus began by collecting the corresponding saturation, and hue values of our object. Once calibrated, we developed the primary algorithm which encompassed sending each frame of video input to a function, that would then, through the use of opencv gradience and blurring effects, create contours around the objects edges. Drawing a rectangle around these contours is what then allowed us to determine the object’s area, x,y coordinates and position relative to the center line. Finally, we spent a lot of time testing and adjusting fixed values to improve the algorithm’s efficiency as much as possible and account for different lightings and environments. This was an essential step as the effectiveness of the OpenCV algorithm, just like the other components, is crucial to the overall vision and execution of Follakart. 
+
+### Object Position and Motor control
+After detecting the object, the cart calculates the distance and angle between itself and the object using algorithms whose errors were halved over the past month.
+Once detected, the cart powers its motors to either rotate or translate as needed. Once this motion was developed, we integrated a PD controller and Pulse Width Modulation to ensure the motors get the optimum amount of power. 
+Additionally, if the object leaves the frame, the cart triggers a macro which was improved to leverage past object-position data to locate the object faster by varying rotation direction and speed. 
+
 
 ## General Notes
 
